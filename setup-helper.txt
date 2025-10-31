@@ -1,0 +1,234 @@
+╔══════════════════════════════════════════════════════════════════════╗
+║                    STUDY MANAGER - CONFIGURAÇÃO                      ║
+║                       Siga os passos abaixo                          ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────┐
+│ PASSO 1: INSTALAR DEPENDÊNCIAS COM NPM                              │
+└──────────────────────────────────────────────────────────────────────┘
+   
+   1️⃣ Instale as dependências do projeto:
+      npm install
+   
+   O que está acontecendo:
+   - Instalando Next.js, React, Supabase, Tailwind e outras libs
+   - Pode levar 2-5 minutos dependendo da sua internet
+   
+   Aguarde até ver: "added XXX packages" no terminal
+
+
+┌──────────────────────────────────────────────────────────────────────┐
+│ PASSO 2: CRIAR PROJETO NO SUPABASE                                   │
+└──────────────────────────────────────────────────────────────────────┘
+   
+   1️⃣ Acesse: https://supabase.com
+   
+   2️⃣ Clique em "Start your project" ou "Sign in"
+   
+   3️⃣ Faça login com GitHub (recomendado) ou email
+   
+   4️⃣ Clique em "New Project"
+   
+   5️⃣ Preencha:
+      • Name: study-manager
+      • Database Password: [crie uma senha forte e ANOTE!]
+      • Region: South America (São Paulo) - recomendado
+      • Plan: Free
+   
+   6️⃣ Clique "Create new project"
+   
+   7️⃣ AGUARDE 2-3 minutos até aparecer "Project is ready"
+
+
+┌──────────────────────────────────────────────────────────────────────┐
+│ PASSO 3: EXECUTAR MIGRATION (CRIAR TABELAS)                         │
+└──────────────────────────────────────────────────────────────────────┘
+   
+   ⚠️ FAÇA ISSO SOMENTE APÓS O PROJETO SUPABASE ESTAR PRONTO!
+   
+   1️⃣ No painel do Supabase, clique em "SQL Editor" (no menu lateral)
+   
+   2️⃣ Clique em "+ New Query"
+   
+   3️⃣ Abra o arquivo:
+      supabase/migrations/001_initial_schema.sql
+      (no seu projeto)
+   
+   4️⃣ Copie TODO o conteúdo (Ctrl+A, Ctrl+C)
+   
+   5️⃣ Cole no SQL Editor do Supabase (Ctrl+V)
+   
+   6️⃣ Clique no botão "RUN" (canto inferior direito)
+      OU pressione Ctrl+Enter
+   
+   7️⃣ Aguarde aparecer: "Success. No rows returned"
+   
+   ✅ Pronto! Suas tabelas foram criadas!
+
+
+┌──────────────────────────────────────────────────────────────────────┐
+│ PASSO 4: COPIAR CREDENCIAIS DO SUPABASE                             │
+└──────────────────────────────────────────────────────────────────────┘
+   
+   1️⃣ No painel Supabase, clique em ⚙️ "Settings" (canto inferior esquerdo)
+   
+   2️⃣ Clique em "API"
+   
+   3️⃣ COPIE e ANOTE os seguintes valores:
+   
+      📍 Project URL (exemplo):
+      └─→ https://abcdefghijk.supabase.co
+   
+      🔑 anon public (exemplo):
+      └─→ eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+   
+      🔐 service_role (clique em "Reveal" primeiro!):
+      └─→ eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+   
+   ⚠️ ATENÇÃO: Guarde esses valores! Você vai precisar no próximo passo.
+
+
+┌──────────────────────────────────────────────────────────────────────┐
+│ PASSO 5: CRIAR CONTA NO ISBNDB                                      │
+└──────────────────────────────────────────────────────────────────────┘
+   
+   1️⃣ Acesse: https://isbndb.com/isbn-database
+   
+   2️⃣ Clique em "Sign Up" (canto superior direito)
+   
+   3️⃣ Preencha seus dados:
+      • Nome
+      • Email
+      • Senha
+   
+   4️⃣ Confirme seu email (se solicitado)
+   
+   5️⃣ Faça login em: https://isbndb.com
+   
+   6️⃣ No dashboard, localize sua "API Key"
+   
+   7️⃣ COPIE a API Key (formato: 12345_abcd1234...)
+   
+   ✅ Plano gratuito: 500 buscas/mês (suficiente para testes!)
+
+
+┌──────────────────────────────────────────────────────────────────────┐
+│ PASSO 6: CRIAR ARQUIVO .env.local                                   │
+└──────────────────────────────────────────────────────────────────────┘
+   
+   1️⃣ Copie o arquivo: env.local.template
+   
+   2️⃣ Renomeie a cópia para: .env.local
+   
+   3️⃣ Abra o .env.local
+   
+   4️⃣ SUBSTITUA os valores de exemplo pelos SEUS valores:
+   
+      NEXT_PUBLIC_SUPABASE_URL=
+      └─→ Cole a Project URL do Supabase (Passo 4)
+      
+      NEXT_PUBLIC_SUPABASE_ANON_KEY=
+      └─→ Cole a anon public key do Supabase (Passo 4)
+      
+      SUPABASE_SERVICE_ROLE_KEY=
+      └─→ Cole a service_role key do Supabase (Passo 4)
+      
+      ISBNDB_API_KEY=
+      └─→ Cole a API Key do ISBNdb (Passo 5)
+      
+      NEXT_PUBLIC_APP_URL=http://localhost:3000
+      └─→ Deixe como está
+   
+   5️⃣ SALVE o arquivo (Ctrl+S)
+   
+   ⚠️ IMPORTANTE: Não compartilhe este arquivo com ninguém!
+
+
+┌──────────────────────────────────────────────────────────────────────┐
+│ PASSO 7: EXECUTAR O PROJETO                                         │
+└──────────────────────────────────────────────────────────────────────┘
+   
+   1️⃣ Abra o terminal neste diretório
+   
+   2️⃣ Execute:
+      npm run dev
+   
+   3️⃣ Aguarde aparecer:
+      "✓ Ready in Xs"
+      "○ Local: http://localhost:3000"
+   
+   4️⃣ Abra o navegador em: http://localhost:3000
+   
+   🎉 Você verá a página inicial do Study Manager!
+
+
+┌──────────────────────────────────────────────────────────────────────┐
+│ PASSO 8: CRIAR SUA PRIMEIRA CONTA                                   │
+└──────────────────────────────────────────────────────────────────────┘
+   
+   1️⃣ No navegador (localhost:3000), clique em "Criar Conta"
+   
+   2️⃣ Preencha:
+      • Nome: Seu nome
+      • Email: seu@email.com
+      • Senha: mínimo 6 caracteres
+   
+   3️⃣ Clique "Criar Conta"
+   
+   4️⃣ Você será redirecionado para o Dashboard
+   
+   5️⃣ Clique em "Novo Workspace"
+   
+   6️⃣ Escolha o tipo (Concurso, Faculdade ou TAF)
+   
+   7️⃣ Dê um nome ao workspace
+   
+   ✅ Pronto! Seu primeiro workspace foi criado!
+
+
+╔══════════════════════════════════════════════════════════════════════╗
+║                         PROBLEMAS COMUNS                             ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+❌ Erro: "Cannot find module..."
+   → npm install ainda não terminou. Aguarde!
+
+❌ Erro: "Invalid API key" (Supabase)
+   → Verifique se copiou as credenciais corretamente no .env.local
+   → Confirme que executou a migration (Passo 3)
+
+❌ Erro: "Book not found" (ISBNdb)
+   → Verifique se a API key está correta
+   → Teste com um ISBN válido (ex: 9780134685991)
+
+❌ Página em branco ou erro 500
+   → Verifique o terminal para ver erros
+   → Confirme que o .env.local está preenchido corretamente
+   → Reinicie o servidor (Ctrl+C e depois npm run dev)
+
+❌ "Auth session missing"
+   → Verifique se a migration foi executada
+   → Confirme as credenciais do Supabase
+
+
+╔══════════════════════════════════════════════════════════════════════╗
+║                    DOCUMENTAÇÃO COMPLETA                             ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+📖 README.md - Visão geral do projeto
+📖 SETUP.md - Setup detalhado com troubleshooting
+📖 INSTRUÇÕES_SETUP.md - Guia passo a passo completo
+
+
+╔══════════════════════════════════════════════════════════════════════╗
+║                      TUDO PRONTO! 🎉                                 ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+Após seguir todos os passos, você terá:
+✅ Aplicativo rodando localmente
+✅ Sistema de autenticação funcionando
+✅ Banco de dados configurado
+✅ Busca de livros por ISBN ativa
+✅ Pronto para criar workspaces e começar a usar!
+
+Bons estudos! 📚
