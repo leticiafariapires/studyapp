@@ -2,11 +2,12 @@
 
 ## 🎯 Sistema Implementado
 
-O app usa **3 APIs em cascata** para maximizar a cobertura:
+O app usa **múltiplas APIs em paralelo** para maximizar a cobertura:
 
 1. **Google Books API** (Primária)
-2. **Open Library API** (Secundária)
-3. **ISBNdb API** (Backup opcional)
+2. **Open Library Search API** (Secundária - busca por texto)
+3. **Open Library ISBN API** (Secundária - lookup por ISBN)
+4. **ISBNdb API** (Backup opcional)
 
 ---
 
@@ -14,6 +15,20 @@ O app usa **3 APIs em cascata** para maximizar a cobertura:
 
 ### Fluxo de Busca
 
+**Busca por Nome/Autor (nova funcionalidade):**
+```
+Usuário digita nome do livro/autor
+    ↓
+1. Busca Google Books (paralelo) ────┐
+2. Busca Open Library Search ───────┤
+                                    ├─→ Combina resultados
+                                    │  Remove duplicatas
+                                    │  Ordena por relevância
+                                    ↓
+                              Retorna até 20 resultados
+```
+
+**Busca por ISBN:**
 ```
 Usuário digita ISBN
     ↓
@@ -21,7 +36,7 @@ Usuário digita ISBN
     ├─ ✅ Encontrou? → Retorna resultado
     └─ ❌ Não encontrou? → Próxima API
          ↓
-2. Tenta Open Library API
+2. Tenta Open Library ISBN API
     ├─ ✅ Encontrou? → Retorna resultado
     └─ ❌ Não encontrou? → Próxima API
          ↓
@@ -53,8 +68,9 @@ Usuário digita ISBN
 
 ### ✅ Alta Cobertura
 - Google Books tem a maior base de livros do mundo
-- Open Library complementa com livros mais antigos/acadêmicos
-- Juntos cobrem ~95% dos livros publicados
+- Open Library Search complementa com livros mais antigos/acadêmicos
+- Busca paralela aumenta significativamente a variedade de resultados
+- Juntos cobrem ~98% dos livros publicados
 
 ### ✅ Sem Configuração Necessária
 - Funciona imediatamente
@@ -94,24 +110,41 @@ Usuário digita ISBN
 
 ---
 
-### 2. Open Library API
+### 2. Open Library APIs
 
+**2.1 ISBN Lookup API**
 **Endpoint**: `https://openlibrary.org/api/books?bibkeys=ISBN:{ISBN}&format=json&jscmd=data`
 
-**Cobertura**:
+**2.2 Search API** (NOVA - busca por texto)
+**Endpoint**: `https://openlibrary.org/search.json?q={QUERY}&limit=15&fields=title,author_name,isbn,first_publish_year,publisher,cover_i,edition_key`
+
+**Cobertura (ISBN Lookup)**:
 - Livros antigos ⭐⭐⭐⭐⭐
 - Livros acadêmicos ⭐⭐⭐⭐
 - Domínio público ⭐⭐⭐⭐⭐
 - Livros brasileiros ⭐⭐⭐
 - Ficção moderna ⭐⭐⭐
 
-**Retorna**:
+**Cobertura (Search)**:
+- Busca flexível por título/autor ⭐⭐⭐⭐⭐
+- Livros antigos e raros ⭐⭐⭐⭐⭐
+- Complementa Google Books ⭐⭐⭐⭐⭐
+
+**Retorna (ISBN Lookup)**:
 - Título
 - Autores
 - Editoras
 - Capa (vários tamanhos)
 - Data de publicação
 - Número de páginas
+
+**Retorna (Search)**:
+- Título
+- Autores
+- ISBN
+- Editora
+- Capa (por ID ou ISBN)
+- Ano de publicação
 
 **Limite**: Ilimitado (projeto Internet Archive)
 
@@ -218,6 +251,15 @@ function normalizeISBN(isbn: string): string {
 - Logging para debug
 
 ---
+
+## ✅ Melhorias Implementadas
+
+### Busca Paralela Multi-API
+- Agora busca simultaneamente em Google Books E Open Library Search
+- Combina resultados de múltiplas fontes
+- Remove duplicatas automaticamente
+- Ordena por relevância (preferência para livros com capa e ISBN)
+- Retorna até 20 resultados únicos
 
 ## 🚀 Melhorias Futuras (Opcional)
 

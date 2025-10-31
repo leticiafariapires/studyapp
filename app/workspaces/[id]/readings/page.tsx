@@ -63,13 +63,32 @@ export default function ReadingsPage() {
 
   const loadReadings = async () => {
     const supabase = createClient();
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('readings')
       .select('*')
       .eq('workspace_id', workspaceId)
       .order('created_at', { ascending: false });
 
-    if (data) setReadings(data);
+    if (error) {
+      console.error('Error loading readings:', error);
+      // Check if error is about missing status column
+      if (error.message?.includes('column') && error.message?.includes('status')) {
+        alert('AVISO: A coluna "status" não existe no banco de dados.\n\nPor favor, execute a migração 002_add_reading_fields.sql no Supabase SQL Editor.');
+      }
+      setReadings([]);
+    } else if (data) {
+      // Use the actual saved status from database, only default if truly missing
+      const readingsWithStatus = data.map(reading => {
+        const status = reading.status ?? 'quero_ler'; // Only default if null/undefined
+        console.log(`Loaded reading: ${reading.title} - Status: ${status} (original: ${reading.status})`);
+        return {
+          ...reading,
+          status: status // Keep the saved status from database
+        };
+      });
+      console.log('All loaded readings with status:', readingsWithStatus.map(r => ({ title: r.title, status: r.status })));
+      setReadings(readingsWithStatus);
+    }
     setLoading(false);
   };
 
@@ -140,48 +159,58 @@ export default function ReadingsPage() {
     
     try {
       if (editingReading) {
-        // Update
-        const { error } = await supabase
+        // Update - ensure status is always included
+        const updateData: any = {
+          isbn: formData.isbn || null,
+          title: formData.title,
+          author: formData.author || null,
+          publisher: formData.publisher || null,
+          cover_url: formData.cover_url || null,
+          stars: formData.stars || null,
+          review: formData.review || null,
+          date_published: formData.date_published || null,
+          read_date: formData.read_date || null,
+          status: formData.status || "quero_ler", // Always include status
+        };
+
+        console.log('Updating reading with status:', updateData.status);
+        const { error, data } = await supabase
           .from('readings')
-          .update({
-            isbn: formData.isbn || null,
-            title: formData.title,
-            author: formData.author || null,
-            publisher: formData.publisher || null,
-            cover_url: formData.cover_url || null,
-            stars: formData.stars || null,
-            review: formData.review || null,
-            date_published: formData.date_published || null,
-            read_date: formData.read_date || null,
-            status: formData.status,
-          })
-          .eq('id', editingReading.id);
+          .update(updateData)
+          .eq('id', editingReading.id)
+          .select(); // Select to verify update
 
         if (error) {
+          console.error('Update error:', error);
+          console.error('Error details:', JSON.stringify(error, null, 2));
           // Retry without new fields if migration not applied
           const msg = String(error.message || "").toLowerCase();
           if (msg.includes('column') && (msg.includes('status') || msg.includes('read_date'))) {
+            // Remove status and read_date if columns don't exist
+            delete updateData.status;
+            delete updateData.read_date;
+            
             const retry = await supabase
               .from('readings')
-              .update({
-                isbn: formData.isbn || null,
-                title: formData.title,
-                author: formData.author || null,
-                publisher: formData.publisher || null,
-                cover_url: formData.cover_url || null,
-                stars: formData.stars || null,
-                review: formData.review || null,
-                date_published: formData.date_published || null,
-              })
-              .eq('id', editingReading.id);
+              .update(updateData)
+              .eq('id', editingReading.id)
+              .select();
+            
             if (retry.error) {
               setFormError("Falha ao salvar a leitura: " + retry.error.message);
+              console.error('Retry error:', retry.error);
               return;
+            } else {
+              setFormError("AVISO: A coluna 'status' não existe no banco. Execute a migração 002_add_reading_fields.sql no Supabase.");
             }
           } else {
             setFormError("Falha ao salvar a leitura: " + error.message);
+            console.error('Update error:', error);
             return;
           }
+        } else {
+          console.log('Reading updated successfully:', data);
+          console.log('Updated status:', data?.[0]?.status);
         }
       } else {
         // Insert
@@ -251,6 +280,8 @@ export default function ReadingsPage() {
 
   const handleEdit = (reading: Reading) => {
     setEditingReading(reading);
+    // Ensure status is loaded correctly - use the actual saved status
+    const savedStatus = reading.status || "quero_ler";
     setFormData({
       isbn: reading.isbn || "",
       title: reading.title,
@@ -261,7 +292,7 @@ export default function ReadingsPage() {
       review: reading.review || "",
       date_published: reading.date_published || "",
       read_date: reading.read_date || "",
-      status: reading.status || "quero_ler",
+      status: savedStatus, // Use the actual saved status
     });
     setDialogOpen(true);
   };
@@ -508,9 +539,19 @@ export default function ReadingsPage() {
 
                   <div className="space-y-2">
                     <Label htmlFor="status">Status</Label>
-                    <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
+                    <Select 
+                      value={formData.status} 
+                      onValueChange={(value) => {
+                        console.log('Status changed to:', value);
+                        setFormData({ ...formData, status: value });
+                      }}
+                    >
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="Selecione o status">
+                          {formData.status === 'lendo' ? '📖 Lendo' : 
+                           formData.status === 'lido' ? '✅ Já Lido' : 
+                           '📚 Quero Ler'}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="quero_ler">📚 Quero Ler</SelectItem>
@@ -562,9 +603,29 @@ export default function ReadingsPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-            {readings.map((reading) => {
-              const getStatusColor = (status: string | null) => {
+          <div className="space-y-8">
+            {/* Organize books by status - use actual saved status */}
+            {['lendo', 'quero_ler', 'lido'].map((statusFilter) => {
+              // Filter by actual saved status from database
+              const filteredReadings = readings.filter(r => {
+                const actualStatus = r.status ?? 'quero_ler'; // Use nullish coalescing
+                return actualStatus === statusFilter;
+              });
+              
+              if (filteredReadings.length === 0) return null;
+
+              const getStatusLabel = (status: string) => {
+                switch (status) {
+                  case 'lendo':
+                    return '📖 Lendo';
+                  case 'lido':
+                    return '✅ Já Lido';
+                  default:
+                    return '📚 Quero Ler';
+                }
+              };
+
+              const getStatusColor = (status: string) => {
                 switch (status) {
                   case 'lendo':
                     return 'bg-blue-500';
@@ -575,7 +636,7 @@ export default function ReadingsPage() {
                 }
               };
 
-              const getStatusIcon = (status: string | null) => {
+              const getStatusIcon = (status: string) => {
                 switch (status) {
                   case 'lendo':
                     return '📖';
@@ -587,111 +648,128 @@ export default function ReadingsPage() {
               };
 
               return (
-                <div key={reading.id} className="group relative">
-                  {/* Book Cover */}
-                  <div className="relative aspect-[2/3] rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
-                    {reading.cover_url ? (
-                      <img
-                        src={reading.cover_url}
-                        alt={reading.title}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          const target = e.currentTarget;
-                          target.style.display = 'none';
-                          const parent = target.parentElement;
-                          if (parent) {
-                            parent.innerHTML = `
-                              <div class="w-full h-full flex flex-col items-center justify-center p-4 text-center bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800">
-                                <svg class="w-16 h-16 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                                </svg>
-                                <p class="text-xs text-gray-600 dark:text-gray-300 line-clamp-3 font-medium">${reading.title}</p>
-                              </div>
-                            `;
-                          }
-                        }}
-                      />
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center p-4 text-center bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800">
-                        <BookOpen className="w-16 h-16 text-gray-400 mb-2" />
-                        <p className="text-xs text-gray-600 dark:text-gray-300 line-clamp-3 font-medium">
-                          {reading.title}
-                        </p>
-                      </div>
-                    )}
-                    
-                    {/* Status Badge */}
-                    <div className={`absolute top-2 left-2 ${getStatusColor(reading.status)} rounded-full w-8 h-8 flex items-center justify-center text-lg shadow-lg`}>
-                      {getStatusIcon(reading.status)}
-                    </div>
-
-                    {/* Stars Badge */}
-                    {reading.stars && reading.stars > 0 && (
-                      <div className="absolute top-2 right-2 bg-black/70 backdrop-blur-sm rounded-full px-2 py-1 flex items-center gap-1">
-                        <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                        <span className="text-xs text-white font-semibold">{reading.stars}</span>
-                      </div>
-                    )}
-
-                    {/* Hover Overlay with Actions */}
-                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-3">
-                      <h3 className="text-white font-semibold text-sm text-center line-clamp-2 mb-2">
-                        {reading.title}
-                      </h3>
-                      {reading.author && (
-                        <p className="text-gray-300 text-xs text-center line-clamp-2 mb-2">
-                          {reading.author}
-                        </p>
-                      )}
-                      {reading.read_date && (
-                        <p className="text-gray-400 text-xs">
-                          📅 {new Date(reading.read_date).toLocaleDateString('pt-BR')}
-                        </p>
-                      )}
-                      <div className="flex flex-col gap-2 mt-2 w-full">
-                        <Button
-                          size="sm"
-                          variant="default"
-                          onClick={() => {
-                            setViewingReading(reading);
-                            setViewDialogOpen(true);
-                          }}
-                          className="h-8 w-full"
-                        >
-                          Ver Detalhes
-                        </Button>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => handleEdit(reading)}
-                            className="h-8 flex-1"
-                          >
-                            <Pencil className="w-3 h-3" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => handleDelete(reading.id)}
-                            className="h-8 flex-1"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
+                <div key={statusFilter} className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-2xl font-bold">{getStatusLabel(statusFilter)}</h2>
+                    <Badge variant="secondary" className="text-sm">
+                      {filteredReadings.length} {filteredReadings.length === 1 ? 'livro' : 'livros'}
+                    </Badge>
                   </div>
+                  
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                    {filteredReadings.map((reading) => {
+                      const status = reading.status || 'quero_ler';
 
-                  {/* Title below (always visible) */}
-                  <div className="mt-2 px-1">
-                    <p className="text-xs font-medium line-clamp-2 text-center">
-                      {reading.title}
-                    </p>
-                    {reading.author && (
-                      <p className="text-xs text-muted-foreground line-clamp-1 text-center mt-1">
-                        {reading.author}
-                      </p>
-                    )}
+                      return (
+                        <div key={reading.id} className="group relative">
+                          {/* Book Cover */}
+                          <div className="relative aspect-[2/3] rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
+                            {reading.cover_url ? (
+                              <img
+                                src={reading.cover_url}
+                                alt={reading.title}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  const target = e.currentTarget;
+                                  target.style.display = 'none';
+                                  const parent = target.parentElement;
+                                  if (parent) {
+                                    parent.innerHTML = `
+                                      <div class="w-full h-full flex flex-col items-center justify-center p-4 text-center bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800">
+                                        <svg class="w-16 h-16 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                                        </svg>
+                                        <p class="text-xs text-gray-600 dark:text-gray-300 line-clamp-3 font-medium">${reading.title}</p>
+                                      </div>
+                                    `;
+                                  }
+                                }}
+                              />
+                            ) : (
+                              <div className="w-full h-full flex flex-col items-center justify-center p-4 text-center bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800">
+                                <BookOpen className="w-16 h-16 text-gray-400 mb-2" />
+                                <p className="text-xs text-gray-600 dark:text-gray-300 line-clamp-3 font-medium">
+                                  {reading.title}
+                                </p>
+                              </div>
+                            )}
+                            
+                            {/* Status Badge - Always visible */}
+                            <div className={`absolute top-2 left-2 z-10 ${getStatusColor(status)} rounded-full w-8 h-8 flex items-center justify-center text-lg shadow-lg border-2 border-white dark:border-gray-800`}>
+                              {getStatusIcon(status)}
+                            </div>
+
+                            {/* Stars Badge */}
+                            {reading.stars && reading.stars > 0 && (
+                              <div className="absolute top-2 right-2 bg-black/70 backdrop-blur-sm rounded-full px-2 py-1 flex items-center gap-1">
+                                <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                                <span className="text-xs text-white font-semibold">{reading.stars}</span>
+                              </div>
+                            )}
+
+                            {/* Hover Overlay with Actions */}
+                            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-3">
+                              <h3 className="text-white font-semibold text-sm text-center line-clamp-2 mb-2">
+                                {reading.title}
+                              </h3>
+                              {reading.author && (
+                                <p className="text-gray-300 text-xs text-center line-clamp-2 mb-2">
+                                  {reading.author}
+                                </p>
+                              )}
+                              {reading.read_date && (
+                                <p className="text-gray-400 text-xs">
+                                  📅 {new Date(reading.read_date).toLocaleDateString('pt-BR')}
+                                </p>
+                              )}
+                              <div className="flex flex-col gap-2 mt-2 w-full">
+                                <Button
+                                  size="sm"
+                                  variant="default"
+                                  onClick={() => {
+                                    setViewingReading(reading);
+                                    setViewDialogOpen(true);
+                                  }}
+                                  className="h-8 w-full"
+                                >
+                                  Ver Detalhes
+                                </Button>
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    onClick={() => handleEdit(reading)}
+                                    className="h-8 flex-1"
+                                  >
+                                    <Pencil className="w-3 h-3" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    onClick={() => handleDelete(reading.id)}
+                                    className="h-8 flex-1"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Title below (always visible) */}
+                          <div className="mt-2 px-1">
+                            <p className="text-xs font-medium line-clamp-2 text-center">
+                              {reading.title}
+                            </p>
+                            {reading.author && (
+                              <p className="text-xs text-muted-foreground line-clamp-1 text-center mt-1">
+                                {reading.author}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               );
@@ -785,9 +863,9 @@ export default function ReadingsPage() {
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Status:</span>
                           <Badge variant="secondary">
-                            {viewingReading.status === 'lido' && '✅ Lido'}
-                            {viewingReading.status === 'lendo' && '📖 Lendo'}
-                            {viewingReading.status === 'quero_ler' && '📚 Quero Ler'}
+                            {(viewingReading.status || 'quero_ler') === 'lido' && '✅ Lido'}
+                            {(viewingReading.status || 'quero_ler') === 'lendo' && '📖 Lendo'}
+                            {(viewingReading.status || 'quero_ler') === 'quero_ler' && '📚 Quero Ler'}
                           </Badge>
                         </div>
                       </div>
