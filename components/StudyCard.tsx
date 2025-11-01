@@ -2,7 +2,7 @@ import React from 'react';
 import styled from 'styled-components';
 import { BookOpen, Clock, TrendingUp } from 'lucide-react';
 
-const CardContainer = styled.div`
+const CardContainer = styled.div<{ gradient?: boolean }>`
   background: ${props => props.gradient 
     ? 'linear-gradient(135deg, #4A90E2 0%, #9C27B0 100%)'
     : '#FFFFFF'};
@@ -37,15 +37,15 @@ const CardHeader = styled.div`
   margin-bottom: 16px;
 `;
 
-const CardTitle = styled.h3`
-  font-family: 'Poppins', sans-serif;
+const CardTitle = styled.h3<{ light?: boolean }>`
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 20px;
   font-weight: 600;
   color: ${props => props.light ? '#FFFFFF' : '#1F2937'};
   margin: 0;
 `;
 
-const CardIcon = styled.div`
+const CardIcon = styled.div<{ light?: boolean }>`
   width: 48px;
   height: 48px;
   border-radius: 12px;
@@ -56,8 +56,8 @@ const CardIcon = styled.div`
   color: ${props => props.light ? '#FFFFFF' : '#4A90E2'};
 `;
 
-const CardDescription = styled.p`
-  font-family: 'Inter', sans-serif;
+const CardDescription = styled.p<{ light?: boolean }>`
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 14px;
   color: ${props => props.light ? 'rgba(255, 255, 255, 0.9)' : '#6B7280'};
   margin: 0 0 16px 0;
@@ -70,11 +70,11 @@ const CardStats = styled.div`
   margin-bottom: 16px;
 `;
 
-const StatItem = styled.div`
+const StatItem = styled.div<{ light?: boolean }>`
   display: flex;
   align-items: center;
   gap: 6px;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 14px;
   color: ${props => props.light ? 'rgba(255, 255, 255, 0.9)' : '#6B7280'};
   
@@ -84,7 +84,7 @@ const StatItem = styled.div`
   }
 `;
 
-const ProgressBar = styled.div`
+const ProgressBar = styled.div<{ light?: boolean }>`
   width: 100%;
   height: 8px;
   background: ${props => props.light ? 'rgba(255, 255, 255, 0.2)' : '#F3E5F5'};
@@ -93,7 +93,7 @@ const ProgressBar = styled.div`
   margin-bottom: 16px;
 `;
 
-const ProgressFill = styled.div`
+const ProgressFill = styled.div<{ light?: boolean; progress?: number }>`
   height: 100%;
   background: ${props => props.light ? '#FFFFFF' : 'linear-gradient(90deg, #4A90E2 0%, #9C27B0 100%)'};
   border-radius: 4px;
@@ -107,8 +107,8 @@ const CardFooter = styled.div`
   align-items: center;
 `;
 
-const ActionButton = styled.button`
-  font-family: 'Inter', sans-serif;
+const ActionButton = styled.button<{ light?: boolean }>`
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 14px;
   font-weight: 500;
   padding: 8px 16px;
@@ -125,8 +125,8 @@ const ActionButton = styled.button`
   }
 `;
 
-const ProgressText = styled.span`
-  font-family: 'Inter', sans-serif;
+const ProgressText = styled.span<{ light?: boolean }>`
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 14px;
   font-weight: 600;
   color: ${props => props.light ? '#FFFFFF' : '#1F2937'};

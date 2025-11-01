@@ -8,7 +8,7 @@ import { BookOpen, Target, TrendingUp, Calendar, Clock, Award } from 'lucide-rea
 const DashboardContainer = styled.div`
   min-height: 100vh;
   background: linear-gradient(135deg, #F9FAFB 0%, #E3F2FD 100%);
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 `;
 
 const Header = styled.header`
@@ -23,7 +23,7 @@ const HeaderContent = styled.div`
 `;
 
 const Greeting = styled.h1`
-  font-family: 'Poppins', sans-serif;
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 36px;
   font-weight: 700;
   margin: 0 0 8px 0;
@@ -46,7 +46,7 @@ const Section = styled.section`
 `;
 
 const SectionTitle = styled.h2`
-  font-family: 'Poppins', sans-serif;
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 24px;
   font-weight: 600;
   color: #1F2937;
@@ -86,7 +86,7 @@ const StatCard = styled.div`
   }
 `;
 
-const StatIcon = styled.div`
+const StatIcon = styled.div<{ color?: string; iconColor?: string }>`
   width: 48px;
   height: 48px;
   border-radius: 12px;
@@ -121,7 +121,7 @@ const QuickActions = styled.div`
 `;
 
 const QuickActionButton = styled.button`
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 14px;
   font-weight: 500;
   padding: 12px 24px;
@@ -147,7 +147,7 @@ const QuickActionButton = styled.button`
 `;
 
 const Dashboard = () => {
-  const handleCardAction = (cardName) => {
+  const handleCardAction = (cardName: string) => {
     console.log(`Action clicked for: ${cardName}`);
   };
 
