@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Enable styled-components support
+  compiler: {
+    styledComponents: true,
+  },
   // Disable SSL verification for corporate networks
   experimental: {
     serverActions: {
