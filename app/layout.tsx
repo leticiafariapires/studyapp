@@ -21,6 +21,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
+      {/* 
+        Note: Fonts are loaded via link tags instead of next/font 
+        due to external network limitations in some environments.
+        In production, consider using next/font for optimal performance.
+      */}
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

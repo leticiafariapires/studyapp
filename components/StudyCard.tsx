@@ -1,6 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
-import { BookOpen, Clock, TrendingUp } from 'lucide-react';
+import { BookOpen, Clock, TrendingUp, Target } from 'lucide-react';
 
 const CardContainer = styled.div<{ gradient?: boolean }>`
   background: ${props => props.gradient 
@@ -132,7 +132,26 @@ const ProgressText = styled.span<{ light?: boolean }>`
   color: ${props => props.light ? '#FFFFFF' : '#1F2937'};
 `;
 
-export const StudyCard = ({ 
+interface StudyCardProps {
+  title?: string;
+  description?: string;
+  progress?: number;
+  timeSpent?: string;
+  totalItems?: number;
+  gradient?: boolean;
+  icon?: 'book' | 'clock' | 'trending' | 'target';
+  onAction?: () => void;
+  actionText?: string;
+}
+
+const iconMap = {
+  book: BookOpen,
+  clock: Clock,
+  trending: TrendingUp,
+  target: Target,
+} as const;
+
+export const StudyCard: React.FC<StudyCardProps> = ({ 
   title = "Study Session",
   description = "Complete your daily study goals",
   progress = 0,
@@ -143,7 +162,7 @@ export const StudyCard = ({
   onAction = () => {},
   actionText = "Continue"
 }) => {
-  const IconComponent = icon === "book" ? BookOpen : icon === "clock" ? Clock : TrendingUp;
+  const IconComponent = iconMap[icon];
   const isLight = gradient;
   
   return (
