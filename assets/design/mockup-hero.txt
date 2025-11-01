@@ -1,0 +1,1 @@
+Placeholder: mockup hero image inspired by the provided Dribbble reference. I will add final PNG/SVG assets to this folder after exporting the Figma mockups. For now, this file marks the intended asset location: assets/design/mockup-hero.png
