@@ -1,19 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Enable static HTML export for Netlify
-  output: 'export',
-  
   // Enable styled-components support
   compiler: {
     styledComponents: true,
   },
   
-  // Disable server-side features for static export
+  // Enable server actions
   experimental: {
-    // Disable server actions in production
-    serverActions: process.env.NODE_ENV === 'development' ? {
-      allowedOrigins: ['localhost:3000', 'localhost:3001'],
-    } : false,
+    serverActions: true,
   },
   
   // Webpack configuration
@@ -29,7 +23,6 @@ const nextConfig = {
   
   // Image optimization configuration
   images: {
-    unoptimized: true, // Required for static export
     remotePatterns: [
       {
         protocol: 'https',
@@ -38,16 +31,8 @@ const nextConfig = {
     ],
   },
   
-  // Add trailing slash for Netlify compatibility
-  trailingSlash: true,
-  
-  // Disable React StrictMode for static export
-  reactStrictMode: false,
+  // Enable React StrictMode
+  reactStrictMode: true,
 };
-
-// Ensure we're building a static export
-if (process.env.NODE_ENV === 'production') {
-  nextConfig.output = 'export';
-}
 
 export default nextConfig;

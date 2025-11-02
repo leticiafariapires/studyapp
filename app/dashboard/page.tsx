@@ -1,25 +1,27 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Target, BookOpen, Dumbbell } from "lucide-react";
+'use client';
 
-export default async function DashboardPage() {
-  const supabase = await createClient();
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Plus, Target, BookOpen, Dumbbell } from 'lucide-react';
 
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
+interface Workspace {
+  id: string;
+  name: string;
+  type: string;
+  description?: string;
+  created_at: string;
+}
 
-  if (authError || !user) {
-    redirect("/auth/login");
-  }
-
-  const { data: workspaces } = await supabase
-    .from('workspaces')
-    .select('*')
-    .eq('owner_id', user.id)
-    .eq('active', true)
-    .order('created_at', { ascending: false });
+export default function DashboardPage() {
+  const [user, setUser] = useState<any>(null);
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  const supabase = createClientComponentClient();
 
   const getWorkspaceIcon = (type: string) => {
     switch (type) {
@@ -32,6 +34,117 @@ export default async function DashboardPage() {
       default:
         return <Target className="w-8 h-8" />;
     }
+  };
+
+  const getWorkspaceColor = (type: string) => {
+    switch (type) {
+      case 'concurso':
+        return 'text-blue-600 dark:text-blue-400';
+      case 'faculdade':
+        return 'text-purple-600 dark:text-purple-400';
+      case 'taf':
+        return 'text-green-600 dark:text-green-400';
+      default:
+        return 'text-gray-600 dark:text-gray-400';
+    }
+  };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Check if user is authenticated
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error || !session) {
+          router.push('/auth/login');
+          return;
+        }
+
+        setUser(session.user);
+
+        // Fetch workspaces
+        const { data: workspacesData, error: workspacesError } = await supabase
+          .from('workspaces')
+          .select('*')
+          .eq('owner_id', session.user.id)
+          .eq('active', true)
+          .order('created_at', { ascending: false });
+
+        if (workspacesError) {
+          throw workspacesError;
+        }
+
+        setWorkspaces(workspacesData || []);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [router, supabase.auth]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+        <Link href="/workspaces/new">
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            New Workspace
+          </Button>
+        </Link>
+      </div>
+
+      {workspaces.length === 0 ? (
+        <div className="text-center py-12">
+          <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-4">No workspaces found</h2>
+          <p className="text-gray-500 dark:text-gray-400 mb-6">Create your first workspace to get started</p>
+          <Link href="/workspaces/new">
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Create Workspace
+            </Button>
+          </Link>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {workspaces.map((workspace) => (
+            <Card key={workspace.id} className="hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-xl">{workspace.name}</CardTitle>
+                  <div className={getWorkspaceColor(workspace.type)}>
+                    {getWorkspaceIcon(workspace.type)}
+                  </div>
+                </div>
+                <CardDescription className="mt-2">
+                  {workspace.description || 'No description provided'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex justify-between items-center text-sm text-gray-500 dark:text-gray-400">
+                  <span>Created on {new Date(workspace.created_at).toLocaleDateString()}</span>
+                  <Link href={`/workspaces/${workspace.id}`} className="text-blue-600 hover:underline">
+                    View details
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
   };
 
   const getWorkspaceColor = (type: string) => {
