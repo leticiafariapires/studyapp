@@ -16,10 +16,8 @@ import { SimpleSwitch } from "@/components/ui/SimpleSwitch";
 export interface Topic {
   id: string;
   subject_id: string;
-  title: string;
-  description: string | null;
-  is_completed: boolean;
-  order_index: number;
+  name: string;
+  completed: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -64,16 +62,21 @@ export default function SubjectTopicsPage() {
 
   const loadTopics = async () => {
     const supabase = createClient();
+    console.log('🔍 Loading topics for subject:', subjectId);
     const { data, error } = await supabase
-      .from('subject_topics')
+      .from('topics')
       .select('*')
       .eq('subject_id', subjectId)
-      .order('order_index', { ascending: true });
+      .order('created_at', { ascending: true });
 
-    if (!error && data) {
+    console.log('📊 Topics loaded:', data?.length || 0);
+    if (error) {
+      console.error("❌ Error loading topics:", error);
+      alert(`Erro ao carregar tópicos: ${error.message}`);
+    }
+    if (data) {
+      console.log('📋 Topics data:', data);
       setTopics(data);
-    } else {
-      console.error("Error loading topics:", error);
     }
     setLoading(false);
   };
@@ -82,29 +85,42 @@ export default function SubjectTopicsPage() {
     e.preventDefault();
     
     const supabase = createClient();
+    console.log('💾 Saving topic:', formData);
     
     if (editingTopic) {
       // Update
-      await supabase
-        .from('subject_topics')
+      const { error } = await supabase
+        .from('topics')
         .update({
-          title: formData.title,
-          description: formData.description,
-          is_completed: formData.is_completed,
+          name: formData.title,
+          completed: formData.is_completed,
           updated_at: new Date().toISOString(),
         })
         .eq('id', editingTopic.id);
+      
+      if (error) {
+        console.error('❌ Error updating topic:', error);
+        alert(`Erro ao atualizar: ${error.message}`);
+        return;
+      }
+      console.log('✅ Topic updated successfully');
     } else {
       // Create
-      await supabase
-        .from('subject_topics')
+      const { data, error } = await supabase
+        .from('topics')
         .insert({
           subject_id: subjectId,
-          title: formData.title,
-          description: formData.description,
-          is_completed: formData.is_completed,
-          order_index: topics.length,
-        });
+          name: formData.title,
+          completed: formData.is_completed,
+        })
+        .select();
+      
+      if (error) {
+        console.error('❌ Error creating topic:', error);
+        alert(`Erro ao criar tópico: ${error.message}`);
+        return;
+      }
+      console.log('✅ Topic created:', data);
     }
 
     setDialogOpen(false);
@@ -116,9 +132,9 @@ export default function SubjectTopicsPage() {
   const handleEdit = (topic: Topic) => {
     setEditingTopic(topic);
     setFormData({
-      title: topic.title,
-      description: topic.description || "",
-      is_completed: topic.is_completed,
+      title: topic.name,
+      description: "",
+      is_completed: topic.completed,
     });
     setDialogOpen(true);
   };
@@ -127,16 +143,17 @@ export default function SubjectTopicsPage() {
     if (!confirm("Tem certeza que deseja excluir este tópico?")) return;
     
     const supabase = createClient();
-    await supabase.from('subject_topics').delete().eq('id', id);
+    await supabase.from('topics').delete().eq('id', id);
     loadTopics();
   };
 
   const toggleComplete = async (topic: Topic) => {
     const supabase = createClient();
     await supabase
-      .from('subject_topics')
+      .from('topics')
       .update({ 
-        is_completed: !topic.is_completed,
+        completed: !topic.completed,
+        completed_at: !topic.completed ? new Date().toISOString() : null,
         updated_at: new Date().toISOString()
       })
       .eq('id', topic.id);
@@ -152,7 +169,7 @@ export default function SubjectTopicsPage() {
     );
   }
 
-  const completedCount = topics.filter(t => t.is_completed).length;
+  const completedCount = topics.filter(t => t.completed).length;
   const progress = topics.length > 0 ? Math.round((completedCount / topics.length) * 100) : 0;
 
   return (
@@ -178,18 +195,6 @@ export default function SubjectTopicsPage() {
           </div>
 
           <div className="flex gap-2">
-            <Link href={`/workspaces/${workspaceId}/subjects/${subjectId}/readings`}>
-              <Button variant="outline" size="sm">
-                <BookOpen className="w-4 h-4 mr-2" />
-                Leituras
-              </Button>
-            </Link>
-            <Link href={`/workspaces/${workspaceId}/subjects/${subjectId}/notes`}>
-              <Button variant="outline" size="sm">
-                <ListChecks className="w-4 h-4 mr-2" />
-                Anotações
-              </Button>
-            </Link>
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
                 <Button 
@@ -296,7 +301,7 @@ export default function SubjectTopicsPage() {
               <Card 
                 key={topic.id} 
                 className={`transition-all hover:shadow-md ${
-                  topic.is_completed ? 'opacity-80' : ''
+                  topic.completed ? 'opacity-80' : ''
                 }`}
               >
                 <CardHeader className="pb-2">
@@ -305,23 +310,18 @@ export default function SubjectTopicsPage() {
                       <button 
                         onClick={() => toggleComplete(topic)}
                         className="mt-1"
-                        aria-label={topic.is_completed ? "Marcar como não concluído" : "Marcar como concluído"}
+                        aria-label={topic.completed ? "Marcar como não concluído" : "Marcar como concluído"}
                       >
-                        {topic.is_completed ? (
+                        {topic.completed ? (
                           <CheckCircle className="w-5 h-5 text-green-500" />
                         ) : (
                           <Circle className="w-5 h-5 text-gray-300" />
                         )}
                       </button>
                       <div>
-                        <CardTitle className={`text-lg ${topic.is_completed ? 'line-through text-muted-foreground' : ''}`}>
-                          {topic.title}
+                        <CardTitle className={`text-lg ${topic.completed ? 'line-through text-muted-foreground' : ''}`}>
+                          {topic.name}
                         </CardTitle>
-                        {topic.description && (
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {topic.description}
-                          </p>
-                        )}
                       </div>
                     </div>
                     <div className="flex gap-2">

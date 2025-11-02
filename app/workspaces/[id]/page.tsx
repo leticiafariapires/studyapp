@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
+import { RevisionTracker } from "@/components/revision-tracker";
 import { ArrowLeft, Settings, BookOpen, Target, Dumbbell, Sparkles, TrendingUp, Clock, Award, Star, Plus, CalendarDays } from "lucide-react";
 
 export default async function WorkspacePage({ params }: { params: { id: string } }) {
@@ -31,11 +32,15 @@ export default async function WorkspacePage({ params }: { params: { id: string }
 
   if (workspace.type === 'concurso') {
     // Load study sessions stats
-    const { data: sessions } = await supabase
+    const { data: sessions, error: sessionsError } = await supabase
       .from('sessions')
       .select('*')
       .eq('workspace_id', params.id)
       .eq('session_type', 'study');
+    
+    console.log('🔍 Workspace ID:', params.id);
+    console.log('📊 Sessions found:', sessions?.length || 0);
+    if (sessionsError) console.error('❌ Sessions error:', sessionsError);
 
     const totalMinutes = sessions?.reduce((sum, s) => sum + (s.metadata?.duration_minutes || 0), 0) || 0;
     const totalQuestions = sessions?.reduce((sum, s) => sum + (s.metadata?.questions_total || 0), 0) || 0;
@@ -147,6 +152,7 @@ export default async function WorkspacePage({ params }: { params: { id: string }
     dashboardData = {
       // Reading stats
       totalBooks: readings?.length || 0,
+      totalReadings: readings?.length || 0,
       withReview: readings?.filter(r => r.review).length || 0,
       avgRating: avgRating.toFixed(1),
       topRated,
@@ -805,14 +811,16 @@ export default async function WorkspacePage({ params }: { params: { id: string }
                 <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
                   <CardHeader>
                     <CardTitle>Sessões de Estudo</CardTitle>
-                    <CardDescription>Registre suas sessões</CardDescription>
+                    <CardDescription>
+                      {dashboardData.totalSessions || 0} sessões registradas
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-muted-foreground mb-4">
                       Tempo estudado, questões resolvidas, acertos e erros
                     </p>
                     <Button className="w-full">
-                      Registrar Sessão
+                      {dashboardData.totalSessions > 0 ? 'Ver Sessões' : 'Registrar Primeira Sessão'}
                     </Button>
                   </CardContent>
                 </Card>
@@ -928,20 +936,22 @@ export default async function WorkspacePage({ params }: { params: { id: string }
                 </Card>
               </Link>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Evolução</CardTitle>
-                  <CardDescription>Acompanhe seu progresso</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Gráficos de desempenho
-                  </p>
-                  <Button className="w-full" disabled>
-                    Em breve
-                  </Button>
-                </CardContent>
-              </Card>
+              <Link href={`/workspaces/${workspace.id}/reports`}>
+                <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+                  <CardHeader>
+                    <CardTitle>Evolução</CardTitle>
+                    <CardDescription>Acompanhe seu progresso</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Gráficos de desempenho e evolução
+                    </p>
+                    <Button className="w-full">
+                      Ver Evolução
+                    </Button>
+                  </CardContent>
+                </Card>
+              </Link>
             </>
           )}
 
@@ -1000,6 +1010,13 @@ export default async function WorkspacePage({ params }: { params: { id: string }
             </>
           )}
         </div>
+
+        {/* Revisões Programadas - Apenas para Concurso */}
+        {workspace.type === 'concurso' && (
+          <div className="mt-8">
+            <RevisionTracker workspaceId={workspace.id} />
+          </div>
+        )}
 
       </div>
     </div>

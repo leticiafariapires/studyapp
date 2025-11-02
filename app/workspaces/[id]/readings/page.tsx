@@ -516,6 +516,20 @@ export default function ReadingsPage() {
                   </div>
 
                   <div className="space-y-2">
+                    <Label htmlFor="cover_url">URL da Capa (opcional)</Label>
+                    <Input
+                      id="cover_url"
+                      value={formData.cover_url || ''}
+                      onChange={(e) => setFormData({ ...formData, cover_url: e.target.value })}
+                      placeholder="https://example.com/cover.jpg"
+                      type="url"
+                    />
+                    <p className="text-xs text-gray-500">
+                      Cole o link direto da imagem da capa do livro
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
                     <Label>Avaliação</Label>
                     <div className="flex gap-1">
                       {[1, 2, 3, 4, 5].map((star) => (
@@ -656,7 +670,7 @@ export default function ReadingsPage() {
                     </Badge>
                   </div>
                   
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-3">
                     {filteredReadings.map((reading) => {
                       const status = reading.status || 'quero_ler';
 

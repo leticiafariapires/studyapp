@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, TrendingUp, TrendingDown, Award, Target, Clock, Calendar } from "lucide-react";
+import { TAFEvolution } from "@/components/taf-evolution";
 
 interface SubjectStats {
   name: string;
@@ -31,8 +32,11 @@ export default function ReportsPage() {
   const params = useParams();
   const workspaceId = params.id as string;
   
+  const [workspaceType, setWorkspaceType] = useState<string>('');
   const [subjectStats, setSubjectStats] = useState<SubjectStats[]>([]);
   const [periodStats, setPeriodStats] = useState<PeriodStats[]>([]);
+  const [tafTrainings, setTafTrainings] = useState<any[]>([]);
+  const [exerciseTypes, setExerciseTypes] = useState<string[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState("30");
   const [loading, setLoading] = useState(true);
 
@@ -43,10 +47,41 @@ export default function ReportsPage() {
   const loadReports = async () => {
     const supabase = createClient();
     
+    // Load workspace to check type
+    const { data: workspace } = await supabase
+      .from('workspaces')
+      .select('type')
+      .eq('id', workspaceId)
+      .single();
+    
+    if (workspace) {
+      setWorkspaceType(workspace.type);
+    }
+    
     // Calculate date range
     const endDate = new Date();
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - parseInt(selectedPeriod));
+    
+    // Load TAF data if it's a TAF workspace
+    if (workspace?.type === 'taf') {
+      const { data: trainings } = await supabase
+        .from('taf_trainings')
+        .select('*')
+        .eq('workspace_id', workspaceId)
+        .order('training_date', { ascending: true });
+      
+      if (trainings) {
+        setTafTrainings(trainings);
+        
+        // Get unique exercise types
+        const types = Array.from(new Set(trainings.map(t => t.exercise_type)));
+        setExerciseTypes(types);
+      }
+      
+      setLoading(false);
+      return;
+    }
 
     const { data: sessions } = await supabase
       .from('sessions')
@@ -149,6 +184,54 @@ export default function ReportsPage() {
   const totalQuestions = subjectStats.reduce((sum, s) => sum + s.totalQuestions, 0);
   const totalCorrect = subjectStats.reduce((sum, s) => sum + s.correctQuestions, 0);
   const overallAccuracy = totalQuestions > 0 ? (totalCorrect / totalQuestions) * 100 : 0;
+
+  // Render TAF Evolution
+  if (workspaceType === 'taf') {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <Link href={`/workspaces/${workspaceId}`}>
+              <Button variant="ghost">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Voltar
+              </Button>
+            </Link>
+            <div>
+              <h1 className="text-3xl font-bold">Evolução TAF</h1>
+              <p className="text-gray-600 dark:text-gray-400 mt-1">
+                Acompanhe seu progresso nos exercícios
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          </div>
+        ) : exerciseTypes.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <p className="text-muted-foreground">
+                Nenhum treino registrado ainda. Comece a registrar seus treinos para ver a evolução!
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid md:grid-cols-2 gap-6">
+            {exerciseTypes.map(exerciseType => (
+              <TAFEvolution 
+                key={exerciseType}
+                trainings={tafTrainings}
+                exerciseType={exerciseType}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">

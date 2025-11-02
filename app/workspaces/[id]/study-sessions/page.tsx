@@ -80,12 +80,16 @@ export default function StudySessionsPage() {
     const supabase = createClient();
     
     // Load sessions
-    const { data: sessionsData } = await supabase
+    const { data: sessionsData, error: sessionsError } = await supabase
       .from('sessions')
       .select('*')
       .eq('workspace_id', workspaceId)
       .eq('session_type', 'study')
-      .order('session_date', { ascending: false });
+      .order('start_at', { ascending: false });
+    
+    console.log('🔍 Study Sessions - Workspace ID:', workspaceId);
+    console.log('📊 Sessions loaded:', sessionsData?.length || 0);
+    if (sessionsError) console.error('❌ Error loading sessions:', sessionsError);
 
     // Load subjects
     const { data: subjectsData } = await supabase
@@ -95,9 +99,10 @@ export default function StudySessionsPage() {
       .order('name');
 
     if (sessionsData) {
+      console.log('📋 Raw sessions data:', sessionsData);
       const formattedSessions = sessionsData.map((s: any) => ({
         id: s.id,
-        session_date: s.start_at.split('T')[0],
+        session_date: s.start_at?.split('T')[0] || new Date().toISOString().split('T')[0],
         subject_name: s.metadata?.subject_name || 'Não especificado',
         duration_minutes: s.metadata?.duration_minutes || 0,
         questions_total: s.metadata?.questions_total || 0,
@@ -107,6 +112,7 @@ export default function StudySessionsPage() {
         notes: s.metadata?.notes || null,
         created_at: s.created_at,
       }));
+      console.log('✅ Formatted sessions:', formattedSessions);
       setSessions(formattedSessions);
       calculateStats(formattedSessions);
     }
