@@ -11,6 +11,9 @@
     "test:e2e": "playwright test",
     "type-check": "tsc --noEmit"
   },
+  "engines": {
+    "node": ">=16.0.0"
+  },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.0.5",
     "@radix-ui/react-avatar": "^1.0.4",
